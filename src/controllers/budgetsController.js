@@ -3,7 +3,15 @@ import prisma from "../config/prisma.js";
 export async function getBudget(req, res) {
   try {
     const { userId, month } = req.params; // month: YYYY-MM
-    const row = await prisma.budget.findUnique({ where: { userId_month: { userId, month } } });
+    const row = await prisma.budget.findUnique({ 
+      where: { 
+        userId_month: { 
+          userId, 
+          month 
+        } 
+      } 
+    });
+    console.log("Budget query result:", row); // Debug log
     return res.status(200).json(row || null);
   } catch (error) {
     console.log("Error getting budget", error);

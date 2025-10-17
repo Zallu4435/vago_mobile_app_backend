@@ -3,28 +3,58 @@ import prisma from "../config/prisma.js";
 export async function getTransactionsByUserId(req, res) {
   try {
     const { userId } = req.params;
-    const { status, type, category, startDate, endDate, sort } = req.query;
+    const { 
+      status, 
+      type, 
+      category, 
+      startDate, 
+      endDate, 
+      sort, 
+      search,
+      page = 1,
+      limit = 20
+    } = req.query;
 
+    // Build where clause
     const where = {
       userId,
       ...(status ? { status } : {}),
       ...(type ? { type } : {}),
       ...(category ? { category } : {}),
       ...(startDate || endDate
-        ? { date: { gte: startDate ? new Date(startDate) : undefined, lte: endDate ? new Date(endDate) : undefined } }
+        ? { 
+            date: { 
+              gte: startDate ? new Date(startDate) : undefined, 
+              lte: endDate ? new Date(endDate) : undefined 
+            } 
+          }
         : {}),
+      // Add search functionality
+      ...(search ? {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { category: { contains: search, mode: 'insensitive' } },
+          { notes: { contains: search, mode: 'insensitive' } }
+        ]
+      } : {}),
     };
 
+    // Build order by clause
     let orderBy;
     switch (sort) {
+      case "latest":
+      case "date_desc":
+        orderBy = [{ date: "desc" }, { id: "desc" }];
+        break;
       case "oldest":
+      case "date_asc":
         orderBy = [{ date: "asc" }, { id: "asc" }];
         break;
       case "amount_desc":
-        orderBy = [{ amount: "desc" }];
+        orderBy = [{ amount: "desc" }, { date: "desc" }];
         break;
       case "amount_asc":
-        orderBy = [{ amount: "asc" }];
+        orderBy = [{ amount: "asc" }, { date: "desc" }];
         break;
       case "status":
         orderBy = [{ status: "asc" }, { date: "desc" }];
@@ -33,9 +63,30 @@ export async function getTransactionsByUserId(req, res) {
         orderBy = [{ date: "desc" }, { id: "desc" }];
     }
 
-    const transactions = await prisma.transaction.findMany({ where, orderBy });
+    // Parse pagination parameters
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    res.status(200).json(transactions);
+    // Get total count for pagination
+    const totalCount = await prisma.transaction.count({ where });
+
+    // Get paginated transactions
+    const transactions = await prisma.transaction.findMany({ 
+      where, 
+      orderBy,
+      skip,
+      take: limitNum
+    });
+
+    // Return paginated response
+    res.status(200).json({
+      transactions,
+      total: totalCount,
+      page: pageNum,
+      limit: limitNum,
+      hasMore: skip + transactions.length < totalCount
+    });
   } catch (error) {
     console.log("Error getting the transactions", error);
     res.status(500).json({ message: "Internal server error" });

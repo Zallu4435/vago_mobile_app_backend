@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Transaction {
+  id         Int       @id @default(autoincrement())
+  userId     String    @map("user_id")
+  title      String
+  amount     Decimal
+  category   String
+  createdAt  DateTime  @default(dbgenerated("CURRENT_DATE")) @map("created_at")
+  type       String    @default("expense")
+  date       DateTime  @default(dbgenerated("CURRENT_DATE"))
+  status     String    @default("completed")
+  notes      String?
+
+  @@map("transactions")
+  @@index([userId, date], name: "idx_transactions_user_date")
+  @@index([userId, status], name: "idx_transactions_user_status")
+  @@index([userId, type], name: "idx_transactions_user_type")
+}
+
+model Budget {
+  id              Int     @id @default(autoincrement())
+  userId          String  @map("user_id")
+  month           String
+  totalLimit      Decimal @map("total_limit")
+  categoryLimits  Json?   @map("category_limits")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, month])
+  @@map("budgets")
+}
+
+model Setting {
+  id         Int      @id @default(autoincrement())
+  userId     String   @unique @map("user_id")
+  currency   String   @default("₹")
+  startMonth Int      @default(4) @map("start_month")
+  theme      String   @default("system")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("settings")
+}
+
+model Recurring {
+  id             Int      @id @default(autoincrement())
+  userId         String   @map("user_id")
+  title          String
+  amount         Decimal
+  type           String
+  category       String
+  repeatInterval String   @map("repeat_interval")
+  nextDate       DateTime @map("next_date")
+  notes          String?
+
+  @@map("recurring")
+}
+
+model UserProfile {
+  id        Int      @id @default(autoincrement())
+  userId    String   @unique @map("user_id")
+  fullName  String?  @map("full_name")
+  avatarUrl String?  @map("avatar_url")
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@map("user_profiles")
+}
+
+

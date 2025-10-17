@@ -29,8 +29,8 @@ export async function getTransactionsByUserId(req, res) {
             } 
           }
         : {}),
-      // Add search functionality
-      ...(search ? {
+      // Add search functionality (only if search has non-whitespace chars)
+      ...(search && search.trim() ? {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
           { category: { contains: search, mode: 'insensitive' } },
